@@ -1,0 +1,22 @@
+body {
+    font-family: Arial, sans-serif;
+    text-align: center;
+    margin: 50px;
+}
+nav a {
+    margin: 0 15px;
+    text-decoration: none;
+    font-weight: bold;
+}
+form {
+    display: inline-block;
+    text-align: left;
+}
+input, button {
+    display: block;
+    margin: 10px 0;
+}
+.flash {
+    color: red;
+    font-weight: bold;
+}
