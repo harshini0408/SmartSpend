@@ -1,22 +1,91 @@
+/* General Styles */
 body {
-    font-family: Arial, sans-serif;
+    font-family: 'Poppins', sans-serif;
+    background-color: #f8f9fa;
+    margin: 0;
+    padding: 0;
     text-align: center;
-    margin: 50px;
 }
-nav a {
-    margin: 0 15px;
-    text-decoration: none;
+
+/* Header */
+h1 {
+    color: #ff6600;
+    font-size: 36px;
     font-weight: bold;
+    margin-top: 20px;
 }
+
+/* Section Headings */
+h2, h3 {
+    color: #333;
+    margin-top: 20px;
+}
+
+/* Forms & Inputs */
 form {
-    display: inline-block;
-    text-align: left;
+    background: white;
+    padding: 20px;
+    width: 50%;
+    margin: 20px auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
-input, button {
-    display: block;
-    margin: 10px 0;
+
+input, button, select {
+    width: 80%;
+    margin: 10px;
+    padding: 12px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-size: 16px;
 }
-.flash {
-    color: red;
+
+button {
+    background-color: #28a745;
+    color: white;
     font-weight: bold;
+    cursor: pointer;
+    border: none;
+    transition: 0.3s;
+}
+
+button:hover {
+    background-color: #218838;
+}
+
+/* Expense List */
+ul {
+    list-style: none;
+    padding: 0;
+    margin: 20px auto;
+    width: 50%;
+}
+
+ul li {
+    background: white;
+    padding: 15px;
+    margin: 10px 0;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.category {
+    font-weight: bold;
+    color: #ff6600;
+}
+
+/* Monthly Report Section */
+#expenseChart {
+    max-width: 600px;
+    margin: 20px auto;
+    padding: 20px;
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
