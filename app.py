@@ -53,10 +53,6 @@ def home():
         return redirect(url_for('dashboard'))
     return render_template('index.html')
 
-@app.route('/budget-summary')
-def budget_summary():
-    return jsonify({"message": "Budget summary works!"})
-
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
     if request.method == 'POST':
@@ -96,14 +92,21 @@ def login():
 def logout():
     session.pop('user_id', None)
     return redirect(url_for('home'))
-
 @app.route('/dashboard')
 def dashboard():
     if 'user_id' not in session:
         return redirect(url_for('login'))
+
     user = db.session.get(User, session['user_id'])
+    
+    if not user:  # If user is None, clear session and redirect
+        session.pop('user_id', None)
+        flash("Session expired or invalid. Please log in again.", "error")
+        return redirect(url_for('login'))
+    
     categories = Category.query.filter_by(user_id=user.id).all()
     return render_template('dashboard.html', user=user, categories=categories)
+
 
 @app.route('/profile', methods=['GET', 'POST'])
 def profile():
@@ -142,6 +145,7 @@ def add_expense():
         cost = float(request.form['cost'])
         date = datetime.strptime(request.form['date'], '%Y-%m-%d').date()
         category = request.form['category']
+
         if cost <= 0:
             return jsonify({'error': 'Cost must be a positive number'}), 400
         
@@ -149,14 +153,7 @@ def add_expense():
         db.session.add(new_expense)
         db.session.commit()
 
-        # Spending Limit Check
-        user = db.session.get(User, session['user_id'])
-        total_expenses = db.session.query(db.func.sum(Expense.cost)).filter_by(user_id=user.id).scalar() or 0
-        warning = None
-        if total_expenses > user.spending_limit:
-            warning = 'Warning: You have exceeded your spending limit!'
-
-        return jsonify({'message': 'Expense added successfully!', 'warning': warning})
+        return jsonify({'message': 'Expense added successfully!'})
 
     except ValueError:
         return jsonify({'error': 'Invalid input data'}), 400
@@ -170,17 +167,24 @@ def get_expenses(date):
     expenses = Expense.query.filter_by(user_id=session['user_id'], date=date).all()
     return jsonify([{'name': e.name, 'cost': e.cost, 'category': e.category} for e in expenses])
 
-@app.route('/get_budget/<month>/<year>')
-def get_budget(month, year):
+@app.route('/monthly_report/<month>/<year>')
+def monthly_report(month, year):
     if 'user_id' not in session:
         return jsonify({'error': 'Not logged in'}), 403
     user = db.session.get(User, session['user_id'])
-    total_expenses = db.session.query(db.func.sum(Expense.cost)).filter(
+    
+    # Get expenses for the month and year
+    expenses = Expense.query.filter(
         Expense.user_id == user.id,
         db.extract('month', Expense.date) == int(month),
         db.extract('year', Expense.date) == int(year)
-    ).scalar() or 0
-    return jsonify({'total_expenses': total_expenses, 'spending_limit': user.spending_limit})
+    ).all()
+    
+    category_totals = {}
+    for expense in expenses:
+        category_totals[expense.category] = category_totals.get(expense.category, 0) + expense.cost
+    
+    return jsonify(category_totals)
 
 if __name__ == '__main__':
     with app.app_context():
