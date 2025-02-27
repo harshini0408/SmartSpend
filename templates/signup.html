@@ -7,6 +7,17 @@
     <link rel="stylesheet" href="static/styles.css">
 </head>
 <body>
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="flash-messages">
+                {% for category, message in messages %}
+                    <p class="{{ category }}">{{ message }}</p>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+
     <h1>SmartSpend</h1>
     <h2>Sign Up</h2>
     <form action="/signup" method="POST">

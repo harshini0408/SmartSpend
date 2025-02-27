@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile - SmartSpend</title>
+    <link rel="stylesheet" href="static/styles.css">
+</head>
+<body>
+    <h1>SmartSpend</h1>
+    <h2>Profile</h2>
+    <p>Username: {{ user.username }}</p>
+    <p>Email: {{ user.email }}</p>
+
+    <h2>Update Income & Spending Limit</h2>
+    <form action="/profile" method="POST">
+        <input type="number" name="income" placeholder="Monthly Income" value="{{ user.income }}" required>
+        <input type="number" name="spending_limit" placeholder="Spending Limit" value="{{ user.spending_limit }}" required>
+        <button type="submit">Update</button>
+    </form>
+
+    <a href="/dashboard"><button>Back to Dashboard</button></a>
+</body>
+</html>

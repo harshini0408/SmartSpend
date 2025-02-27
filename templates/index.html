@@ -8,6 +8,18 @@
 </head>
 <body>
     <h1>Welcome to SmartSpend</h1>
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages() %}
+        {% if messages %}
+            <div class="flash-messages">
+                {% for message in messages %}
+                    <p>{{ message }}</p>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+
     <a href="/signup"><button>Sign Up</button></a>
     <a href="/login"><button>Login</button></a>
 </body>

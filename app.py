@@ -8,14 +8,20 @@ import joblib
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///expense_tracker.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['PERMANENT_SESSION_LIFETIME'] = 1800  # 30 minutes session timeout
+
 db = SQLAlchemy(app)
 
-# Load the trained model and vectorizer
-if os.path.exists('expense_category_model.pkl') and os.path.exists('expense_category_vectorizer.pkl'):
-    model = joblib.load('expense_category_model.pkl')
-    vectorizer = joblib.load('expense_category_vectorizer.pkl')
-else:
-    raise FileNotFoundError("Model or vectorizer not found. Train the model using train_model.py.")
+# Load the trained model and vectorizer safely
+model, vectorizer = None, None
+try:
+    if os.path.exists('expense_category_model.pkl'):
+        model = joblib.load('expense_category_model.pkl')
+    if os.path.exists('expense_category_vectorizer.pkl'):
+        vectorizer = joblib.load('expense_category_vectorizer.pkl')
+except Exception as e:
+    print(f"Error loading model: {e}")
 
 # Database Models
 class User(db.Model):
@@ -23,11 +29,14 @@ class User(db.Model):
     username = db.Column(db.String(80), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password = db.Column(db.String(200), nullable=False)
+    income = db.Column(db.Float, nullable=True, default=0)
+    spending_limit = db.Column(db.Float, nullable=True, default=0)
 
 class Category(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(80), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    db.UniqueConstraint('name', 'user_id', name='unique_category_per_user')
 
 class Expense(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -44,13 +53,26 @@ def home():
         return redirect(url_for('dashboard'))
     return render_template('index.html')
 
+@app.route('/budget-summary')
+def budget_summary():
+    return jsonify({"message": "Budget summary works!"})
+
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
     if request.method == 'POST':
         username = request.form['username']
         email = request.form['email']
-        password = generate_password_hash(request.form['password'])
-        new_user = User(username=username, email=email, password=password)
+        password = request.form['password']
+
+        if User.query.filter_by(email=email).first():
+            flash('Email already registered.')
+            return redirect(url_for('signup'))
+        
+        if User.query.filter_by(username=username).first():
+            flash('Username already taken.')
+            return redirect(url_for('signup'))
+
+        new_user = User(username=username, email=email, password=generate_password_hash(password))
         db.session.add(new_user)
         db.session.commit()
         flash('Account created successfully!')
@@ -65,6 +87,7 @@ def login():
         user = User.query.filter_by(email=email).first()
         if user and check_password_hash(user.password, password):
             session['user_id'] = user.id
+            session.permanent = True
             return redirect(url_for('dashboard'))
         flash('Invalid email or password')
     return render_template('login.html')
@@ -78,89 +101,86 @@ def logout():
 def dashboard():
     if 'user_id' not in session:
         return redirect(url_for('login'))
-    user = User.query.get(session['user_id'])
+    user = db.session.get(User, session['user_id'])
     categories = Category.query.filter_by(user_id=user.id).all()
     return render_template('dashboard.html', user=user, categories=categories)
+
+@app.route('/profile', methods=['GET', 'POST'])
+def profile():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    user = db.session.get(User, session['user_id'])
+    if request.method == 'POST':
+        try:
+            user.income = float(request.form['income'])
+            user.spending_limit = max(0, float(request.form['spending_limit']))  # Ensure non-negative
+            db.session.commit()
+            flash('Profile updated successfully!')
+        except ValueError:
+            flash('Invalid input. Please enter valid numbers.')
+    return render_template('profile.html', user=user)
 
 @app.route('/add_category', methods=['POST'])
 def add_category():
     if 'user_id' not in session:
         return jsonify({'error': 'Not logged in'}), 403
-
     name = request.form['name']
     user_id = session['user_id']
-
+    if Category.query.filter_by(name=name, user_id=user_id).first():
+        return jsonify({'error': 'Category already exists'}), 400
     new_category = Category(name=name, user_id=user_id)
     db.session.add(new_category)
     db.session.commit()
-
     return jsonify({'message': 'Category added successfully!'})
 
 @app.route('/add_expense', methods=['POST'])
 def add_expense():
     if 'user_id' not in session:
         return jsonify({'error': 'Not logged in'}), 403
-
     try:
         name = request.form['name']
         cost = float(request.form['cost'])
         date = datetime.strptime(request.form['date'], '%Y-%m-%d').date()
         category = request.form['category']
-
-        # Validate cost
         if cost <= 0:
             return jsonify({'error': 'Cost must be a positive number'}), 400
-
-        # Add expense to the database
+        
         new_expense = Expense(name=name, cost=cost, category=category, date=date, user_id=session['user_id'])
         db.session.add(new_expense)
         db.session.commit()
 
-        return jsonify({'message': 'Expense added successfully!', 'category': category})
+        # Spending Limit Check
+        user = db.session.get(User, session['user_id'])
+        total_expenses = db.session.query(db.func.sum(Expense.cost)).filter_by(user_id=user.id).scalar() or 0
+        warning = None
+        if total_expenses > user.spending_limit:
+            warning = 'Warning: You have exceeded your spending limit!'
 
-    except ValueError as e:
+        return jsonify({'message': 'Expense added successfully!', 'warning': warning})
+
+    except ValueError:
         return jsonify({'error': 'Invalid input data'}), 400
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@app.route('/get_expenses/<date>', methods=['GET'])
+@app.route('/get_expenses/<date>')
 def get_expenses(date):
     if 'user_id' not in session:
-        return jsonify([]), 403
-    
-    try:
-        user_id = session['user_id']
-        expenses = Expense.query.filter_by(user_id=user_id, date=datetime.strptime(date, '%Y-%m-%d').date()).all()
-        return jsonify([{'name': exp.name, 'cost': exp.cost, 'category': exp.category} for exp in expenses])
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'Not logged in'}), 403
+    expenses = Expense.query.filter_by(user_id=session['user_id'], date=date).all()
+    return jsonify([{'name': e.name, 'cost': e.cost, 'category': e.category} for e in expenses])
 
-@app.route('/monthly_report/<month>/<year>', methods=['GET'])
-def monthly_report(month, year):
+@app.route('/get_budget/<month>/<year>')
+def get_budget(month, year):
     if 'user_id' not in session:
         return jsonify({'error': 'Not logged in'}), 403
-
-    try:
-        # Validate month and year
-        month = int(month)
-        year = int(year)
-        if month < 1 or month > 12 or year < 2000 or year > 2100:
-            return jsonify({'error': 'Invalid month or year'}), 400
-
-        user_id = session['user_id']
-        expenses = Expense.query.filter(
-            Expense.user_id == user_id,
-            db.extract('month', Expense.date) == month,
-            db.extract('year', Expense.date) == year
-        ).all()
-
-        category_totals = {}
-        for expense in expenses:
-            category_totals[expense.category] = category_totals.get(expense.category, 0) + expense.cost
-
-        return jsonify(category_totals)
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+    user = db.session.get(User, session['user_id'])
+    total_expenses = db.session.query(db.func.sum(Expense.cost)).filter(
+        Expense.user_id == user.id,
+        db.extract('month', Expense.date) == int(month),
+        db.extract('year', Expense.date) == int(year)
+    ).scalar() or 0
+    return jsonify({'total_expenses': total_expenses, 'spending_limit': user.spending_limit})
 
 if __name__ == '__main__':
     with app.app_context():
