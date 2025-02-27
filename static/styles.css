@@ -41,8 +41,33 @@ input, button, select {
     border: 1px solid #ccc;
     border-radius: 5px;
     font-size: 16px;
+    text-align: center;
 }
 
+/* 🔹 Centering Month and Year Selectors */
+#month-selector, #year-selector {
+    width: 80%;
+    padding: 12px;
+    margin: 10px auto;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-size: 16px;
+    background: white;
+    text-align: center;
+    appearance: none; /* Removes default browser styling */
+}
+
+/* Fixes for Month Dropdown */
+#month-selector {
+    display: block;
+}
+
+/* Fixes for Year Input */
+#year-selector {
+    display: block;
+}
+
+/* Button Styling */
 button {
     background-color: #28a745;
     color: white;
@@ -54,19 +79,6 @@ button {
 
 button:hover {
     background-color: #218838;
-}
-
-/* Budget Form Specific Styles */
-#budget-form {
-    background-color: #e3f2fd; /* Light blue background for the budget form */
-}
-
-#budget-form button {
-    background-color: #2196f3; /* Blue color for the budget form button */
-}
-
-#budget-form button:hover {
-    background-color: #1976d2; /* Darker blue on hover */
 }
 
 /* Expense List */
@@ -88,9 +100,13 @@ ul li {
     align-items: center;
 }
 
-.category {
-    font-weight: bold;
-    color: #ff6600;
+/* 🔹 Improved AI-Predicted Category Styling */
+ul li strong {
+    background-color: #ffeeba; /* Light yellow background */
+    color: #856404; /* Dark text */
+    padding: 5px 10px;
+    border-radius: 5px;
+    font-size: 14px;
 }
 
 /* Monthly Report Section */
@@ -184,4 +200,26 @@ ul li {
     input, button, select {
         width: 90%;
     }
+}
+
+/* 📌 Ensure Report Section is Compact */
+#report-section {
+    display: none;
+    width: 50%;
+    max-width: 600px;
+    margin: 20px auto;
+    padding: 20px;
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    text-align: center;
+}
+
+/* 📌 Fix Chart Size */
+#expenseChart {
+    width: 100% !important;
+    max-width: 400px; /* Ensures it doesn't stretch too much */
+    height: auto;
+    max-height: 400px; /* Prevents it from dragging infinitely */
+    margin: 0 auto;
 }

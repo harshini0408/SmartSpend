@@ -13,9 +13,6 @@
     <h2>Welcome, {{ user.username }}!</h2>
     <a href="/logout"><button>Logout</button></a>
     <a href="/profile"><button>Profile</button></a>
-    
-    <h2>Your Monthly Income: ₹{{ user.income }}</h2>
-    <h2>Your Spending Limit: ₹{{ user.spending_limit }}</h2>
 
     <h2>Select Date</h2>
     <input type="date" id="selected-date" required>
@@ -24,22 +21,15 @@
     <form id="expense-form">
         <input type="text" name="name" placeholder="Expense Name" required>
         <input type="number" name="cost" placeholder="Cost" required>
-        <select name="category" required>
-            {% for category in categories %}
-                <option value="{{ category.name }}">{{ category.name }}</option>
-            {% endfor %}
-        </select>
         <button type="submit">Add Expense</button>
-    </form>
-    
-    <h2>Add New Category</h2>
-    <form id="category-form">
-        <input type="text" name="name" placeholder="Category Name" required>
-        <button type="submit">Add Category</button>
     </form>
 
     <h2>Expenses for <span id="displayed-date">Today</span></h2>
-    <ul id="expense-list"></ul>
+    <ul id="expense-list">
+        {% for expense in expenses %}
+            <li>{{ expense.name }} - ₹{{ expense.cost }} <strong>({{ expense.category }})</strong></li>
+        {% endfor %}
+    </ul>
     <h3 id="total-expenses">Total: ₹0</h3>
 
     <h2>Monthly Report</h2>
@@ -60,7 +50,10 @@
     <input type="number" id="year-selector" placeholder="Year" min="2000" max="2100">
     <button id="generate-report">Generate Report</button>
     
-    <h2>Expense Breakdown</h2>
-    <canvas id="expenseChart" width="400" height="400"></canvas>
+    <!-- ✅ Wrapped Expense Breakdown in a visible section -->
+    <div id="report-section" style="display: none;">
+        <h2>Expense Breakdown</h2>
+        <canvas id="expenseChart" width="400" height="400"></canvas>
+    </div>
 </body>
 </html>
